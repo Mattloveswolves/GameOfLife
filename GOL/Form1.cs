@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -9,14 +10,15 @@ using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace GOL
 {
     public partial class Form1 : Form
     {
         // The universe array
-        static int arrx = 5;
-        static int arry = 5;
+        static int arrx = 30;
+        static int arry = 30;
 
         bool[,] universe = new bool[arrx, arry];
         bool[,] scratchPad = new bool[arrx, arry];
@@ -31,6 +33,12 @@ namespace GOL
         // Generation count
         int generations = 0;
 
+        // Variable to hold seed
+        int seed = 0;
+
+        // Alive Cell count
+        int alive = 0;
+
         public Form1()
         {
             InitializeComponent();
@@ -38,7 +46,24 @@ namespace GOL
             // Setup the timer
             timer.Interval = 100; // milliseconds
             timer.Tick += Timer_Tick;
-            timer.Enabled = false; // start timer running
+            timer.Enabled = false; // Set to false to prevent timer from starting on startup
+
+        }
+        //counts cells that are alive
+
+        private void CountAlive()
+        {
+            alive = 0;
+            
+            for (int y = 0; y < universe.GetLength(1); y++)
+            {
+                for (int x = 0; x < universe.GetLength(0); x++)
+                {
+                    if (universe[x, y] == true)
+                        alive += 1;
+                }
+            }
+            toolStripStatusAlive.Text = "Alive = " + alive.ToString();
         }
         private int CountNeighbors(int x, int y)
         {
@@ -189,48 +214,48 @@ namespace GOL
                     cellRect.Y = y * cellHeight;
                     cellRect.Width = cellWidth;
                     cellRect.Height = cellHeight;
-                    
-                    int neighbors = CountNeighbors(x,y);
+
+                    int neighbors = CountNeighbors(x, y);
                     // Fill the cell with a brush if alive
                     if (universe[x, y] == true)
                     {
                         e.Graphics.FillRectangle(cellBrush, cellRect);
-                        Font font = new Font("Arial", cellHeight/2);
+                        Font font = new Font("Arial", cellHeight / 2);
 
                         StringFormat stringFormat = new StringFormat();
                         stringFormat.Alignment = StringAlignment.Center;
                         stringFormat.LineAlignment = StringAlignment.Center;
-                        
-                        if((neighbors < 2 || neighbors > 3) && universe[x,y] == true)
+
+                        if ((neighbors < 2 || neighbors > 3) && universe[x, y] == true)
                         {
                             e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Red, cellRect, stringFormat);
                         }
-                        else if((neighbors >= 2 || neighbors <= 3) && universe[x,y] == true)
+                        else if ((neighbors >= 2 || neighbors <= 3) && universe[x, y] == true)
                         {
                             e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Green, cellRect, stringFormat);
                         }
-                       
-                        
+
+
                     }
 
-                    if(neighbors > 0)
+                    if (neighbors > 0)
                     {
                         Font font = new Font("Arial", cellHeight / 2);
 
                         StringFormat stringFormat = new StringFormat();
                         stringFormat.Alignment = StringAlignment.Center;
                         stringFormat.LineAlignment = StringAlignment.Center;
-                        
+
                         // green in alive and red is dead
-                        if(neighbors == 3 && universe[x,y] == false)
+                        if (neighbors == 3 && universe[x, y] == false)
                         {
                             e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Green, cellRect, stringFormat);
                         }
-                        else if( universe[x,y] == false)
+                        else if (universe[x, y] == false)
                         {
                             e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Red, cellRect, stringFormat);
                         }
-                        
+
                     }
 
                     // Outline the cell with a pen
@@ -241,6 +266,9 @@ namespace GOL
             // Cleaning up pens and brushes
             gridPen.Dispose();
             cellBrush.Dispose();
+
+            //calling CountAlive After drawing each time
+            CountAlive();
         }
 
         private void graphicsPanel1_MouseClick(object sender, MouseEventArgs e)
@@ -265,29 +293,47 @@ namespace GOL
                 graphicsPanel1.Invalidate();
             }
         }
-
+        //Closes program
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             this.Close();
         }
-
+        // stars timer and next generation as play button
         private void toolStripButton1_Click(object sender, EventArgs e)
         {
             timer.Enabled = true;
         }
-
+        // Stops timer and also stops auto next generation. In other words pauses.
         private void toolStripButton2_Click(object sender, EventArgs e)
         {
             timer.Enabled = false;
         }
-
+        //Goes to next generation
         private void toolStripButton3_Click(object sender, EventArgs e)
         {
             NextGeneration();
         }
-
+        // new button clears universe
         private void newToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            generations = 0;
+            toolStripStatusLabelGenerations.Text = "Generations = " + generations.ToString();
+            //Goes through every cell in generation
+            for (int y = 0; y < universe.GetLength(1); y++)
+            {
+                for (int x = 0; x < universe.GetLength(0); x++)
+                {
+                    universe[x, y] = false;
+                }
+            }
+            graphicsPanel1.Invalidate();
+            timer.Enabled = false;
+        }
+
+        // Other new button
+        private void newToolStripButton_Click(object sender, EventArgs e)
+        {
+           
             generations = 0;
             toolStripStatusLabelGenerations.Text = "Generations = " + generations.ToString();
             for (int y = 0; y < universe.GetLength(1); y++)
@@ -301,19 +347,183 @@ namespace GOL
             timer.Enabled = false;
         }
 
-        private void newToolStripButton_Click(object sender, EventArgs e)
+        private void optionsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            generations = 0;
-            toolStripStatusLabelGenerations.Text = "Generations = " + generations.ToString();
+            OptionsBox options = new OptionsBox();
+            options.Timer = timer.Interval;
+            options.width = arrx;
+            options.height = arry;
+            if(DialogResult.OK == options.ShowDialog())
+            {
+                timer.Interval = (int)options.Timer;
+
+                arrx = (int)options.width;
+                arry = (int)options.height;
+                universe = new bool[arrx, arry];
+                scratchPad = new bool[arrx, arry];
+                graphicsPanel1.Invalidate();
+            }
+            
+        }
+
+        private void fromSeedToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Seed smenu = new Seed();
+
+            smenu.seed = seed;
+            if(DialogResult.OK == smenu.ShowDialog())
+            {  
+                
+                seed = (int)smenu.seed;
+                Random rng = new Random((int)smenu.seed);
+                for (int y = 0; y < universe.GetLength(1); y++)
+                {
+                    for (int x = 0; x < universe.GetLength(0); x++)
+                    {
+                       if (rng.Next(2) == 1)
+                        universe[x, y] = true;
+                       else    
+                        universe[x, y] = false;
+                          
+                    }
+                }
+                
+            }
+               
+            graphicsPanel1.Invalidate();
+        }
+
+        private void fromTimeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Random rng = new Random();
             for (int y = 0; y < universe.GetLength(1); y++)
             {
                 for (int x = 0; x < universe.GetLength(0); x++)
                 {
-                    universe[x, y] = false;
+                    if (rng.Next(2) == 1)
+                        universe[x, y] = true;
+                    else
+                        universe[x, y] = false;
+
                 }
             }
             graphicsPanel1.Invalidate();
-            timer.Enabled = false;
+        }
+
+        private void saveAsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog dlg = new SaveFileDialog();
+            dlg.Filter = "All Files|*.*|Cells|*.cells";
+            dlg.FilterIndex = 2; dlg.DefaultExt = "cells";
+
+
+            if (DialogResult.OK == dlg.ShowDialog())
+            {
+                StreamWriter writer = new StreamWriter(dlg.FileName);
+
+                
+                // Iterate through the universe one row at a time.
+                for (int y = 0; y < universe.GetLength(1); y++)
+                {
+                   
+                    // Create a string to represent the current row.
+                    String currentRow = string.Empty; 
+                    // Iterate through the current row one cell at a time.
+                    for (int x = 0; x < universe.GetLength(0); x++)
+                    {
+                        if( universe[x,y] == true)
+                        {
+                            currentRow += 'O';
+                        }
+                        else { currentRow += '.'; }
+
+                    }
+                    // Once the current row has been read through and the 
+                    // string constructed then write it to the file using WriteLine.
+                
+                    writer.WriteLine(currentRow);
+                }
+                // After all rows and columns have been written then close the file.
+                writer.Close();
+            }
+        }
+
+        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog dlg = new OpenFileDialog();
+            dlg.Filter = "All Files|*.*|Cells|*.cells";
+            dlg.FilterIndex = 2;
+
+            if (DialogResult.OK == dlg.ShowDialog())
+            {
+                StreamReader reader = new StreamReader(dlg.FileName);
+
+                // Create a couple variables to calculate the width and height
+                // of the data in the file.
+                int maxWidth = 0;
+                int maxHeight = 0;
+
+                // Iterate through the file once to get its size.
+                while (!reader.EndOfStream)
+                {
+                    // Read one row at a time.
+                    string row = reader.ReadLine();
+                    if(row.First() != '!')
+                    {
+                        maxHeight += 1;
+                        maxWidth = row.Length;
+                    }
+                  
+                }
+
+                // Resize the current universe and scratchPad
+                // to the width and height of the file calculated above.
+                universe = new bool[maxWidth, maxHeight];
+                scratchPad = new bool[maxWidth, maxHeight];
+                arrx = maxWidth;
+                arry = maxHeight;
+                // Reset the file pointer back to the beginning of the file.
+                reader.BaseStream.Seek(0, SeekOrigin.Begin);
+
+                // Iterate through the file again, this time reading in the cells.
+                int rowNum = 0;
+                while (!reader.EndOfStream)
+                {
+                    // Read one row at a time.
+                    string row = reader.ReadLine();
+
+                    // If the row begins with '!' then
+                    // it is a comment and should be ignored.
+                    if (row.First() != '!')
+                    {
+                        
+                         for (int xPos = 0; xPos < row.Length; xPos++)
+                            {
+                            // If row[xPos] is a 'O' (capital O) then
+                            // set the corresponding cell in the universe to alive.
+                            if (row[xPos] == 'O')
+                            {
+                                universe[xPos, rowNum] = true;
+                            }
+                            else
+                            {
+                                universe[xPos, rowNum] = false;
+                            }
+                        // If row[xPos] is a '.' (period) then
+                        // set the corresponding cell in the universe to dead.
+                            }
+                        rowNum += 1;
+                    }
+                    // If the row is not a comment then 
+                    // it is a row of cells and needs to be iterated through.
+                   
+                }
+
+                // Close the file.
+                reader.Close();
+            }
+            graphicsPanel1.Invalidate();
+
         }
     }
 }
