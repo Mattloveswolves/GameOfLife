@@ -216,6 +216,8 @@ namespace GOL
                     cellRect.Height = cellHeight;
 
                     int neighbors = CountNeighbors(x, y);
+
+                    
                     // Fill the cell with a brush if alive
                     if (universe[x, y] == true)
                     {
@@ -226,15 +228,17 @@ namespace GOL
                         stringFormat.Alignment = StringAlignment.Center;
                         stringFormat.LineAlignment = StringAlignment.Center;
 
-                        if ((neighbors < 2 || neighbors > 3) && universe[x, y] == true)
+                        if (neighborsToolStripMenuItem.Checked)
                         {
-                            e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Red, cellRect, stringFormat);
+                            if ((neighbors < 2 || neighbors > 3) && universe[x, y] == true)
+                            {
+                                e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Red, cellRect, stringFormat);
+                            }
+                            else if ((neighbors >= 2 || neighbors <= 3) && universe[x, y] == true)
+                            {
+                                e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Green, cellRect, stringFormat);
+                            }
                         }
-                        else if ((neighbors >= 2 || neighbors <= 3) && universe[x, y] == true)
-                        {
-                            e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Green, cellRect, stringFormat);
-                        }
-
 
                     }
 
@@ -245,21 +249,25 @@ namespace GOL
                         StringFormat stringFormat = new StringFormat();
                         stringFormat.Alignment = StringAlignment.Center;
                         stringFormat.LineAlignment = StringAlignment.Center;
-
-                        // green in alive and red is dead
-                        if (neighbors == 3 && universe[x, y] == false)
+                        if (neighborsToolStripMenuItem.Checked)
                         {
-                            e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Green, cellRect, stringFormat);
-                        }
-                        else if (universe[x, y] == false)
-                        {
-                            e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Red, cellRect, stringFormat);
+                            // green in alive and red is dead
+                            if (neighbors == 3 && universe[x, y] == false)
+                            {
+                                e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Green, cellRect, stringFormat);
+                            }
+                            else if (universe[x, y] == false)
+                            {
+                                e.Graphics.DrawString(neighbors.ToString(), font, Brushes.Red, cellRect, stringFormat);
+                            }
                         }
 
                     }
 
                     // Outline the cell with a pen
-                    e.Graphics.DrawRectangle(gridPen, cellRect.X, cellRect.Y, cellRect.Width, cellRect.Height);
+                    if(gridToolStripMenuItem.Checked) //Difficult to find a way to implement it without using it with invalidate?
+                        e.Graphics.DrawRectangle(gridPen, cellRect.X, cellRect.Y, cellRect.Width, cellRect.Height);
+                        
                 }
             }
 
@@ -269,6 +277,7 @@ namespace GOL
 
             //calling CountAlive After drawing each time
             CountAlive();
+
         }
 
         private void graphicsPanel1_MouseClick(object sender, MouseEventArgs e)
@@ -524,6 +533,78 @@ namespace GOL
             }
             graphicsPanel1.Invalidate();
 
+        }
+
+        private void playToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            timer.Enabled = true;
+        }
+
+        private void backColorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ColorDialog color = new ColorDialog();
+            color.Color = graphicsPanel1.BackColor;
+            if(DialogResult.OK == color.ShowDialog())
+            {
+                graphicsPanel1.BackColor = color.Color;
+            }
+        }
+
+        private void cellColorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ColorDialog color = new ColorDialog();
+            color.Color = cellColor;
+            if (DialogResult.OK == color.ShowDialog())
+            {
+                cellColor = color.Color;
+            }
+        }
+
+        private void gridColorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ColorDialog color = new ColorDialog();
+            color.Color = gridColor;
+            if (DialogResult.OK == color.ShowDialog())
+            {
+                gridColor = color.Color;
+            }
+        }
+
+        private void randomizeToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            Random rng = new Random();
+            for (int y = 0; y < universe.GetLength(1); y++)
+            {
+                for (int x = 0; x < universe.GetLength(0); x++)
+                {
+                    if (rng.Next(2) == 1)
+                        universe[x, y] = true;
+                    else
+                        universe[x, y] = false;
+
+                }
+            }
+            graphicsPanel1.Invalidate();
+        }
+
+        private void colorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ColorDialog color = new ColorDialog();
+            color.Color = graphicsPanel1.BackColor;
+            if (DialogResult.OK == color.ShowDialog())
+            {
+                graphicsPanel1.BackColor = color.Color;
+            }
+        }
+
+        private void pauseToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            timer.Enabled = false;
+        }
+
+        private void skipToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            NextGeneration();
         }
     }
 }
